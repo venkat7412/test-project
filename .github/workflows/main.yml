@@ -1,59 +1,37 @@
-name: PR Merge Trigger Workflow
-
 on:
-  pull_request:
-    types: [closed]   # Trigger when a PR is closed (merged)
+  push:
     branches:
       - dev
       - qa
       - main
+
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - main
 
 jobs:
   build:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
+      - name: Checkout the appropriate branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
           fetch-depth: 0
 
-      - name: Determine if PR was merged
-        run: |
-          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "PR was merged into ${{ github.event.pull_request.base.ref }} branch."
-          else
-            echo "PR was not merged, skipping job."
-            exit 1
-          fi
-
-      - name: Fetch the appropriate branch
+      - name: Fetch additional branches
         run: |
           git fetch origin dev:refs/remotes/origin/dev
           git fetch origin qa:refs/remotes/origin/qa
           git fetch origin main:refs/remotes/origin/main
 
-      - name: Run branch-specific actions
-        run: |
-          BRANCH="${{ github.event.pull_request.base.ref }}"
-          echo "Triggered for branch: $BRANCH"
-          
-          # Branch-specific logic
-          case "$BRANCH" in
-            dev)
-              echo "Running tests or builds for dev branch"
-              # Add dev-specific tasks (e.g., run tests)
-              ;;
-            qa)
-              echo "Running validations for qa branch"
-              # Add QA-specific tasks (e.g., validate changes)
-              ;;
-            main)
-              echo "Deploying or tagging release on main"
-              # Add production steps (e.g., deploy to production)
-              ;;
-            *)
-              echo "Unknown branch: $BRANCH"
-              exit 1
-              ;;
-          esac
+      - name: List branches
+        run: git branch -a

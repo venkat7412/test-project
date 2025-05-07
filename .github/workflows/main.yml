@@ -1,9 +1,4 @@
 on:
-  push:
-    branches:
-      - dev
-      - qa
-      - main
 
   workflow_dispatch:
     inputs:

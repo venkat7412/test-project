@@ -1,3 +1,5 @@
+name: Branch Build Workflow
+
 on:
   push:
     branches:
@@ -21,17 +23,40 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout the appropriate branch
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref_name }}
-          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
-      - name: Fetch additional branches
+      - name: Fetch all target branches
         run: |
           git fetch origin dev:refs/remotes/origin/dev
           git fetch origin qa:refs/remotes/origin/qa
           git fetch origin main:refs/remotes/origin/main
 
-      - name: List branches
+      - name: List all branches (debug)
         run: git branch -a
+
+      - name: Determine branch and run actions
+        run: |
+          BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
+          echo "Detected branch: $BRANCH"
+
+          case "$BRANCH" in
+            dev)
+              echo "Running tests or builds for dev branch"
+              # Add your dev-specific logic here
+              ;;
+            qa)
+              echo "Running validations for qa branch"
+              # Add your QA validation steps here
+              ;;
+            main)
+              echo "Deploying or tagging release on main"
+              # Add your production steps here
+              ;;
+            *)
+              echo "Unknown branch: $BRANCH"
+              exit 1
+              ;;
+          esac

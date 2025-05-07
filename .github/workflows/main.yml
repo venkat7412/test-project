@@ -1,12 +1,6 @@
-name: Branch Build Workflow
+name: Central Branch Build Workflow
 
 on:
-  push:
-    branches:
-      - dev
-      - qa
-      - main
-
   workflow_dispatch:
     inputs:
       branch:
@@ -18,45 +12,30 @@ on:
           - qa
           - main
 
+  repository_dispatch:
+    types: [trigger-central-workflow]
+
 jobs:
   build:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
+      - name: Checkout target branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch || github.ref }}
+          ref: ${{ github.event.inputs.branch || github.event.client_payload.branch }}
+          fetch-depth: 0
 
-      - name: Fetch all target branches
+      - name: Fetch all branches
         run: |
           git fetch origin dev:refs/remotes/origin/dev
           git fetch origin qa:refs/remotes/origin/qa
           git fetch origin main:refs/remotes/origin/main
 
-      - name: List all branches (debug)
+      - name: List branches (debug)
         run: git branch -a
 
-      - name: Determine branch and run actions
+      - name: Run branch-specific logic
         run: |
-          BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
-          echo "Detected branch: $BRANCH"
-
-          case "$BRANCH" in
-            dev)
-              echo "Running tests or builds for dev branch"
-              # Add your dev-specific logic here
-              ;;
-            qa)
-              echo "Running validations for qa branch"
-              # Add your QA validation steps here
-              ;;
-            main)
-              echo "Deploying or tagging release on main"
-              # Add your production steps here
-              ;;
-            *)
-              echo "Unknown branch: $BRANCH"
-              exit 1
-              ;;
-          esac
+          BRANCH="${{ github.event.inputs.branch || github.event.client_payload.branch }}"
+          echo "Triggered for branch: $BRANCH"
